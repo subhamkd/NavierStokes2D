@@ -1,5 +1,6 @@
-from abc import abstractmethod
 import numpy as np
+import shutil
+import os
 
 def pressure_poisson(p, dx, dy, rho, dt, u, v, pBCs):
     pn = np.empty_like(p)
@@ -34,15 +35,15 @@ def pressure_poisson(p, dx, dy, rho, dt, u, v, pBCs):
 
 
 
-def flow_solver(nt, u, v, dt, dx, dy, p, rho, nu, pBCs, uBCs, vBCs):
+def flow_solver(nt, u, v, dt, ds, dx, dy, p, rho, nu, pBCs, uBCs, vBCs):
     un = np.empty_like(u)
     vn = np.empty_like(v)
     #b = np.zeros((ny, nx))
-    
+    i=0
     for n in range(nt):
         un = u.copy()
         vn = v.copy()
-        
+        i=i+1
         #b = bf(b, rho, dt, u, v, dx, dy)
         p = pressure_poisson(p, dx, dy, rho, dt, u, v, pBCs)
         
@@ -68,6 +69,15 @@ def flow_solver(nt, u, v, dt, dx, dy, p, rho, nu, pBCs, uBCs, vBCs):
                         dt / dy**2 *
                        (vn[2:, 1:-1] - 2 * vn[1:-1, 1:-1] + vn[0:-2, 1:-1])))
         
+        velmag=(u**2+v**2)**0.5
+
+        if ((n+1)%ds==0): #saving the results into .csv files
+            np.savetxt('u'+str(i)+'.csv', u, delimiter=',')
+            np.savetxt('v'+str(i)+'.csv', v, delimiter=',')
+            np.savetxt('p'+str(i)+'.csv', p, delimiter=',')
+            np.savetxt('Umag'+str(i)+'.csv', velmag, delimiter=',')
+            
+
         #boundary conditions for u
 
         uLeft=uBCs[0]
@@ -191,3 +201,18 @@ def YVelBC(a,b,c,d,v,dx,dy):
         v[0,:]=d[1]
     else:
         return('Please enter a valid BC type')
+
+
+def clearResults():
+    fileList=os.listdir('./')
+    
+    if os.path.isdir('./Results'):
+        shutil.rmtree('./Results')
+        os.mkdir('Results')
+    else:
+        os.mkdir('Results')
+    
+    for file in fileList:
+        if file.endswith('.csv'):
+            shutil.move(file,'Results/.')
+
